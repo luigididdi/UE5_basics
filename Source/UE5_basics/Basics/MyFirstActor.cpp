@@ -39,7 +39,7 @@ void AMyFirstActor::BeginPlay()
     */
 }
 
-void AMyFirstActor::OnBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
+/*void AMyFirstActor::OnBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
 {
 	if(!IsValid(OtherActor))
 	{
@@ -69,9 +69,36 @@ void AMyFirstActor::OnBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
 		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Cyan, "IN: "+OtherActor->GetName());
 	}
 	*/
+//}
+
+void AMyFirstActor::OnBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
+{
+	if(!IsValid(OtherActor))
+	{
+		return;
+	}
+
+	UClass* OtherActorClass = OtherActor->GetClass();
+	for(auto& SensedClass : SensedCharacterClasses)
+	{
+		if(SensedClass == OtherActorClass || OtherActorClass->IsChildOf(SensedClass))
+		{
+			// Se non è già presente nell'array, lo aggiungiamo
+			if(!TrackedActors.Contains(OtherActor))
+			{
+				TrackedActors.Add(OtherActor);
+                
+				// Colloquio di lavoro: ci leghiamo all'evento OnDestroyed per evitare puntatori morti!
+				OtherActor->OnDestroyed.AddDynamic(this, &AMyFirstActor::OnTargetDestroyed);
+
+				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Cyan, "SPAWN/IN: " + OtherActor->GetName());
+			}
+			break;
+		}
+	}
 }
 
-void AMyFirstActor::OnEndOverlap(AActor* OverlappedActor, AActor* OtherActor)
+/*void AMyFirstActor::OnEndOverlap(AActor* OverlappedActor, AActor* OtherActor)
 {
 	if(!IsValid(OtherActor))
 	{
@@ -99,6 +126,31 @@ void AMyFirstActor::OnEndOverlap(AActor* OverlappedActor, AActor* OtherActor)
 		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Yellow, "OUT: "+OtherActor->GetName());
 	}
 	*/
+//}
+
+void AMyFirstActor::OnEndOverlap(AActor* OverlappedActor, AActor* OtherActor)
+{
+	if(!IsValid(OtherActor))
+	{
+		return;
+	}
+
+	if(TrackedActors.Contains(OtherActor))
+	{
+		TrackedActors.Remove(OtherActor);
+		OtherActor->OnDestroyed.RemoveDynamic(this, &AMyFirstActor::OnTargetDestroyed);
+
+		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Yellow, "OUT: " + OtherActor->GetName());
+	}
+}
+
+void AMyFirstActor::OnTargetDestroyed(AActor* DestroyedActor)
+{
+	if(IsValid(DestroyedActor))
+	{
+		TrackedActors.Remove(DestroyedActor);
+		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, "DESTROY: " + DestroyedActor->GetName());
+	}
 }
 
 void AMyFirstActor::BindTest()
@@ -107,10 +159,36 @@ void AMyFirstActor::BindTest()
 }
 
 // Called every frame
-void AMyFirstActor::Tick(float DeltaTime)
+/*void AMyFirstActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
 	//GEngine->AddOnScreenDebugMessage(896745, 2.f, FColor::Green, FString::Printf(TEXT("world time: %f"), GetWorld()->TimeSeconds));
 	//GEngine->AddOnScreenDebugMessage(8967444, 2.f, FColor::Blue, "world time: "+FString::SanitizeFloat(GetWorld()->TimeSeconds));
+}*/
+
+void AMyFirstActor::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// Tasto di debug: premi F1 per stampare la lista degli attori tracciati
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if(PC && PC->WasInputKeyJustPressed(EKeys::P))
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, "=== LISTA ATTORI DENTRO MYFIRSTACTOR ===");
+        
+		// Pulizia di sicurezza e stampa
+		for(int32 i = TrackedActors.Num() - 1; i >= 0; --i)
+		{
+			if(IsValid(TrackedActors[i]))
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TrackedActors[i]->GetName());
+			}
+			else
+			{
+				// Se per qualche motivo c'è un elemento non valido, lo rimuoviamo al volo
+				TrackedActors.RemoveAt(i);
+			}
+		}
+	}
 }

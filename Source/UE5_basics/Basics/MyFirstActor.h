@@ -20,6 +20,10 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UBoxComponent* BoxComponent;
+	
+	// Array che contiene gli attori attualmente dentro MyFirstActor
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tracking")
+	TArray<AActor*> TrackedActors;
 
 protected:
 	
@@ -32,6 +36,10 @@ protected:
 
 	UFUNCTION()
 	void OnEndOverlap(AActor* OverlappedActor, AActor* OtherActor);
+	
+	// Funzione richiamata automaticamente quando un attore tracciato viene distrutto[cite: 2]
+	UFUNCTION()
+	void OnTargetDestroyed(AActor* DestroyedActor);
 
 public:
 	

@@ -54,7 +54,7 @@ FName ACoverActor::GetNearbySocket() {
 
 	FName NearestSocket = AvailableSockets[0]; // Get the first one if something goes wrong
 	
-	float MinDistance = INFINITY;
+	float MinDistance = /*INFINITY*/ 300.0f;
 	//Find the socket that is close to the character
 	for (uint8 SocketPtr = 0; SocketPtr < 12; SocketPtr++) {
 		float Distance = DistanceFromPlayer(AvailableSockets[SocketPtr]);

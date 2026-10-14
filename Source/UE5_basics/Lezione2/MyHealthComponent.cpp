@@ -19,13 +19,22 @@ void UMyHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ...
-	
+	currentHealth = maxHealth;
 }
 
 void UMyHealthComponent::GetDamage(int Damage)
 {
-	
+	currentHealth -= Damage;
+}
+
+void UMyHealthComponent::Healing(int Amount)
+{
+	currentHealth += Amount;
+}
+
+void UMyHealthComponent::ActivateHealing(bool Activate)
+{
+	isHealing = Activate;
 }
 
 // Called every frame

@@ -18,6 +18,12 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void GetDamage(int Damage);
+	
+	UFUNCTION(BlueprintCallable)
+	void Healing(int Amount);
+	
+	UFUNCTION(BlueprintCallable)
+	void ActivateHealing(bool Activate);
 
 protected:
 	// Called when the game starts
@@ -28,10 +34,11 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	int currentHealth;
+	bool isHealing = false;
 	
 private:
 	
-	int maxHealth = 100;
+	const int maxHealth = 100;
 		
 };
 

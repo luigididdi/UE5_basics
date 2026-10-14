@@ -83,12 +83,10 @@ void AMyFirstActor::OnBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
 	{
 		if(SensedClass == OtherActorClass || OtherActorClass->IsChildOf(SensedClass))
 		{
-			// Se non è già presente nell'array, lo aggiungiamo
 			if(!TrackedActors.Contains(OtherActor))
 			{
 				TrackedActors.Add(OtherActor);
                 
-				// Colloquio di lavoro: ci leghiamo all'evento OnDestroyed per evitare puntatori morti!
 				OtherActor->OnDestroyed.AddDynamic(this, &AMyFirstActor::OnTargetDestroyed);
 
 				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Cyan, "SPAWN/IN: " + OtherActor->GetName());
@@ -171,13 +169,11 @@ void AMyFirstActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// Tasto di debug: premi F1 per stampare la lista degli attori tracciati
 	APlayerController* PC = GetWorld()->GetFirstPlayerController();
 	if(PC && PC->WasInputKeyJustPressed(EKeys::P))
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, "=== LISTA ATTORI DENTRO MYFIRSTACTOR ===");
         
-		// Pulizia di sicurezza e stampa
 		for(int32 i = TrackedActors.Num() - 1; i >= 0; --i)
 		{
 			if(IsValid(TrackedActors[i]))
@@ -186,7 +182,6 @@ void AMyFirstActor::Tick(float DeltaTime)
 			}
 			else
 			{
-				// Se per qualche motivo c'è un elemento non valido, lo rimuoviamo al volo
 				TrackedActors.RemoveAt(i);
 			}
 		}

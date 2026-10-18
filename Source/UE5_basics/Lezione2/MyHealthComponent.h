@@ -43,3 +43,4 @@ private:
 };
 
 // TODO: Che abbia anche l'autorecover a tempo, tramite comando e due oggetti, uno che guarisce ed uno che fa danno
+// TODO tututu nanana

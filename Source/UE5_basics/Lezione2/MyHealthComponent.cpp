@@ -18,30 +18,54 @@ UMyHealthComponent::UMyHealthComponent()
 void UMyHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	currentHealth = maxHealth;
+	CurrentHealth = MaxHealth;
+	LogHealth(TEXT("Start"));
 }
 
-void UMyHealthComponent::GetDamage(int Damage)
+void UMyHealthComponent::GetDamage(int32 Damage)
 {
-	currentHealth -= Damage;
+	CurrentHealth = FMath::Clamp(CurrentHealth - Damage, 0, MaxHealth);
+	LogHealth(FString::Printf(TEXT("Danno -%d"), Damage));
 }
 
-void UMyHealthComponent::Healing(int Amount)
+void UMyHealthComponent::Healing(int32 Amount)
 {
-	currentHealth += Amount;
+	CurrentHealth = FMath::Clamp(CurrentHealth + Amount, 0, MaxHealth);
+	LogHealth(FString::Printf(TEXT("Cura +%d"), Amount));
 }
 
 void UMyHealthComponent::ActivateHealing(bool Activate)
 {
-	isHealing = Activate;
+	bIsHealing = Activate;
+	TimeSinceLastHeal = 0.f;
+	LogHealth(Activate ? TEXT("Autocura ON") : TEXT("Autocura OFF"));
 }
 
 // Called every frame
-void UMyHealthComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void UMyHealthComponent::TickComponent(float DeltaTime, ELevelTick TickType,
+	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// ...
+	if (!bIsHealing) return;
+
+	TimeSinceLastHeal += DeltaTime;
+	if (TimeSinceLastHeal >= AutoHealInterval)
+	{
+		TimeSinceLastHeal = 0.f;
+		Healing(AutoHealAmount);
+	}
+}
+
+void UMyHealthComponent::LogHealth(const FString& Reason) const
+{
+	const FString Msg = FString::Printf(TEXT("%s | %s -> HP %d/%d"),
+		*GetOwner()->GetName(), *Reason, CurrentHealth, MaxHealth);
+
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *Msg);               // finestra Output Log
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(1, 2.f, FColor::Green, Msg); // a schermo (key 1 = sovrascrive il messaggio precedente)
+	}
 }
 

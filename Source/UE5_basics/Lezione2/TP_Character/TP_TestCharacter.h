@@ -6,7 +6,7 @@
 #include "Components/TimelineComponent.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h" // Necessario per FInputActionValue
-#include "UE5_basics/Lezione2/MyHealthComponent.h"
+//#include "UE5_basics/Lezione2/MyHealthComponent.h"
 #include "TP_TestCharacter.generated.h"
 
 // Dichiarazioni anticipate (Forward Declarations) per evitare errori di compilazione
@@ -15,6 +15,7 @@ class UCameraComponent;
 class UInputAction;
 class UInputMappingContext;
 class UEnhancedInputComponent;
+class UMyHealthComponent;
 
 UCLASS()
 class UE5_BASICS_API ATP_TestCharacter : public ACharacter
@@ -75,6 +76,19 @@ protected:
 	/** Mouse Look Input Action */
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* AimAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* DamageAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* HealAction;
+
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* ToggleAutoHealAction;
+	
+	void DebugDamage();
+	void DebugHeal();
+	void DebugToggleAutoHeal();
 
 public:	
 	// Called every frame
@@ -83,7 +97,8 @@ public:
 	void AimIn();
 	void AimOut();
 	
-	UMyHealthComponent* Health;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Health")
+	TObjectPtr<UMyHealthComponent> Health;
 	
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;

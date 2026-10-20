@@ -11,6 +11,7 @@
 
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
+#include "UE5_basics/Lezione2/MyHealthComponent.h"
 
 // Sets default values
 ATP_TestCharacter::ATP_TestCharacter()
@@ -46,6 +47,8 @@ ATP_TestCharacter::ATP_TestCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false;
+	
+	Health = CreateDefaultSubobject<UMyHealthComponent>(TEXT("Health"));
 }
 
 // Called when the game starts or when spawned
@@ -92,6 +95,14 @@ void ATP_TestCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATP_TestCharacter::Look);
+		
+		if (DamageAction)
+			EnhancedInputComponent->BindAction(DamageAction, ETriggerEvent::Started, this, &ATP_TestCharacter::DebugDamage);
+		if (HealAction)
+			EnhancedInputComponent->BindAction(HealAction, ETriggerEvent::Started, this, &ATP_TestCharacter::DebugHeal);
+		if (ToggleAutoHealAction)
+			EnhancedInputComponent->BindAction(ToggleAutoHealAction, ETriggerEvent::Started, this, &ATP_TestCharacter::DebugToggleAutoHeal);
+
 	}
 }
 
@@ -117,7 +128,7 @@ void ATP_TestCharacter::DoMove(float Right, float Forward)
 {
 	if (GetController() != nullptr)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Purple, "AAAAAA");
+		//GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Purple, "AAAAAA");
 		
 		// find out which way is forward
 		const FRotator Rotation = GetController()->GetControlRotation();
@@ -201,3 +212,7 @@ void ATP_TestCharacter::NotifyControllerChanged()
 		}
 	}
 }
+
+void ATP_TestCharacter::DebugDamage()         { Health->GetDamage(10); }
+void ATP_TestCharacter::DebugHeal()           { Health->Healing(10); }
+void ATP_TestCharacter::DebugToggleAutoHeal() { Health->ToggleAutoHeal(); }

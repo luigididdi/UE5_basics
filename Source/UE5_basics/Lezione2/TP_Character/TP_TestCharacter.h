@@ -86,6 +86,15 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* ToggleAutoHealAction;
 	
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* ShootAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* PickBallAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* Gabagool;
+	
 	void DebugDamage();
 	void DebugHeal();
 	void DebugToggleAutoHeal();
@@ -96,6 +105,11 @@ public:
 
 	void AimIn();
 	void AimOut();
+	void PickBall();
+	void Kitemmuort();
+	
+	bool doIHaveBall = false;
+	bool canPickBall;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Health")
 	TObjectPtr<UMyHealthComponent> Health;

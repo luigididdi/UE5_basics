@@ -103,6 +103,10 @@ void ATP_TestCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		if (ToggleAutoHealAction)
 			EnhancedInputComponent->BindAction(ToggleAutoHealAction, ETriggerEvent::Started, this, &ATP_TestCharacter::DebugToggleAutoHeal);
 
+		if (PickBallAction)
+			EnhancedInputComponent->BindAction(PickBallAction, ETriggerEvent::Started, this, &ATP_TestCharacter::PickBall);
+		if (Gabagool)
+			EnhancedInputComponent->BindAction(Gabagool, ETriggerEvent::Started, this, &ATP_TestCharacter::Kitemmuort);
 	}
 }
 
@@ -211,6 +215,29 @@ void ATP_TestCharacter::NotifyControllerChanged()
 			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, "IMC aggiunto");
 		}
 	}
+}
+
+void ATP_TestCharacter::PickBall()
+{
+	if (!doIHaveBall)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, "Ho già la palla in mano!");
+		return;
+	}
+	
+	if (!canPickBall)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, "Non riesco ad arrivare alla palla!");
+		return;
+	}
+	
+	doIHaveBall = true;
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, "Ho preso la palla in mano!");
+}
+
+void ATP_TestCharacter::Kitemmuort()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, "Kitemmuort");
 }
 
 void ATP_TestCharacter::DebugDamage()         { Health->GetDamage(10); }

@@ -39,6 +39,15 @@ public:
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FollowCamera;
+	
+	// Riferimento alla palla attualmente vicina o posseduta
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Ball")
+	TObjectPtr<class AMyPalla> CurrentBall;
+
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> DropBallAction; // Azione per lasciare la palla
+
+	void DropBall();
 
 protected:
 	// Called when the game starts or when spawned
@@ -82,6 +91,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* HealAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* SprintAction;
 
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* ToggleAutoHealAction;
@@ -90,7 +102,13 @@ protected:
 	UInputAction* ShootAction;
 	
 	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* ThrowBallAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* PickBallAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* DropPallaAction;
 	
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* Gabagool;
@@ -98,6 +116,9 @@ protected:
 	void DebugDamage();
 	void DebugHeal();
 	void DebugToggleAutoHeal();
+	
+	void ThrowStamina();
+	void Sprint();
 
 public:	
 	// Called every frame
@@ -105,6 +126,7 @@ public:
 
 	void AimIn();
 	void AimOut();
+	void ThrowBall();
 	void PickBall();
 	void Kitemmuort();
 	

@@ -1,67 +1,135 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "MyPalla.h"
+#include "Components/SphereComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/EngineTypes.h"
+#include "Lezione2/TP_Character/TP_TestCharacter.h"
 
-// Sets default values
 AMyPalla::AMyPalla()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
-	/*//DA UN FORUM!
-	// FHitResult will hold all data returned by our line collision query
-	FHitResult Hit;
- 
-	// We set up a line trace from our current location to a point 1000cm ahead of us
-	FVector TraceStart = GetActorLocation();
-	FVector TraceEnd = GetActorLocation() + GetActorForwardVector() * 1000.0f;
- 
-	// You can use FCollisionQueryParams to further configure the query
-	// Here we add ourselves to the ignored list so we won't block the trace
-	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(this);
- 
-	// To run the query, you need a pointer to the current level, which you can get from an Actor with GetWorld()
-	// UWorld()->LineTraceSingleByChannel runs a line trace and returns the first actor hit over the provided collision channel.
-	GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, TraceChannelProperty, QueryParams);
- 
-	// You can use DrawDebug helpers and the log to help visualize and debug your trace queries.
-	DrawDebugLine(GetWorld(), TraceStart, TraceEnd, Hit.bBlockingHit ? FColor::Blue : FColor::Red, false, 5.0f, 0, 10.0f);
-	UE_LOG(LogTemp, Log, TEXT("Tracing line: %s to %s"), *TraceStart.ToCompactString(), *TraceEnd.ToCompactString());
- 
-	// If the trace hit something, bBlockingHit will be true,
-	// and its fields will be filled with detailed info about what was hit
-	if (Hit.bBlockingHit && IsValid(Hit.GetActor()))
-	{
-		UE_LOG(LogTemp, Log, TEXT("Trace hit actor: %s"), *Hit.GetActor()->GetName());
-	}
-	else {
-		UE_LOG(LogTemp, Log, TEXT("No Actors were hit"));
-	}*/
+	// 1. La Mesh della palla diventa la Root e gestisce la fisica
+	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
+	RootComponent = MeshComp;
+	MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	MeshComp->SetSimulatePhysics(true); // Cade a terra e rotola con la gravità
+
+	// 2. La sfera di collisione (Trigger) viene attaccata alla Mesh
+	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionComp"));
+	CollisionComp->SetupAttachment(RootComponent);
+	CollisionComp->InitSphereRadius(80.f); // Aumentato leggermente per comodità di pickup
+	CollisionComp->SetCollisionProfileName(TEXT("Trigger"));
 }
 
-// Called when the game starts or when spawned
 void AMyPalla::BeginPlay()
 {
 	Super::BeginPlay();
-	
+    
+	// Colleghiamo l'evento di overlap della sfera
+	CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &AMyPalla::OnOverlapBegin);
+	CollisionComp->OnComponentEndOverlap.AddDynamic(this, &AMyPalla::OnOverlapEnd);
 }
 
-// Called every frame
+void AMyPalla::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (ATP_TestCharacter* Character = Cast<ATP_TestCharacter>(OtherActor))
+	{
+		Character->canPickBall = true;
+		Character->CurrentBall = this;
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, "Premi il tasto per raccogliere la palla!");
+	}
+}
+
+void AMyPalla::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	if (ATP_TestCharacter* Character = Cast<ATP_TestCharacter>(OtherActor))
+	{
+		if (!Character->doIHaveBall && Character->CurrentBall == this)
+		{
+			Character->canPickBall = false;
+			Character->CurrentBall = nullptr;
+		}
+	}
+}
+
 void AMyPalla::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
-void AMyPalla::IsHit(bool isHit)
+void AMyPalla::PickUp(AActor* TargetCharacter)
 {
-	canBePicked = isHit;
+	if (!TargetCharacter) return;
+
+	// Disattiviamo fisica e collisioni a terra
+	MeshComp->SetSimulatePhysics(false);
+	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	CollisionComp->SetCollisionEnabled(ECollisionEnabled::NoCollision); // <-- Ottimo, tieni questa linea!
+
+	// Attacchiamo la palla mantenendo la trasformazione relativa
+	/*FAttachmentTransformRules AttachmentRules(EAttachmentRule::KeepRelativeTransform, true);
+	AttachToActor(TargetCharacter, AttachmentRules);*/
+	// Passi direttamente la regola statica pronta all'uso
+	AttachToActor(TargetCharacter, FAttachmentTransformRules::KeepRelativeTransform);
+
+	// Posizioniamo la palla davanti al personaggio e leggermente sollevata
+	SetActorRelativeLocation(FVector(100.f, 0.f, 50.f));
 }
 
-void AMyPalla::Picked()
+void AMyPalla::Drop()
 {
-	canBePicked = false;
+	// Ricaviamo il personaggio a cui era attaccata prima di staccarla
+	AActor* AttachedChar = GetAttachParentActor();
+
+	// Stacchiamo la palla dal personaggio
+	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+	if (AttachedChar)
+	{
+		// Calcoliamo la posizione 100 unità in avanti rispetto a dove guarda il player
+		FVector DropLocation = AttachedChar->GetActorLocation() + AttachedChar->GetActorForwardVector() * 100.f + FVector(0.f, 0.f, 20.f);
+		SetActorLocation(DropLocation);
+	}
+
+	// Riattiviamo collisioni e fisica per farla cadere a terra
+	CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	MeshComp->SetSimulatePhysics(true);
 }
 
+void AMyPalla::Throw()
+{
+	// Ricaviamo il personaggio a cui era attaccata
+	AActor* AttachedChar = GetAttachParentActor();
+
+	// Stacchiamo la palla dal personaggio
+	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+	if (AttachedChar)
+	{
+		// Posizioniamo la palla leggermente davanti al player prima di lanciare
+		FVector ThrowLocation = AttachedChar->GetActorLocation() + AttachedChar->GetActorForwardVector() * 120.f + FVector(0.f, 0.f, 50.f);
+		SetActorLocation(ThrowLocation);
+	}
+
+	// Riattiviamo collisioni e fisica per permettere alla palla di volare e rimbalzare
+	CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	MeshComp->SetSimulatePhysics(true);
+
+	// Applichiamo la spinta fisica (il lancio)
+	if (AttachedChar)
+	{
+		// Prendiamo la direzione in avanti del character e aggiungiamo una componente Z (verso l'alto) per fare la parabola
+		FVector ThrowDirection = AttachedChar->GetActorForwardVector() + FVector(0.f, 0.f, 0.4f);
+		ThrowDirection.Normalize();
+
+		// Modifica questo valore per regolare la potenza del lancio
+		float ThrowStrength = 1200.f; 
+
+		// AddImpulse spinge l'oggetto istantaneamente in base alla sua massa
+		MeshComp->AddImpulse(ThrowDirection * ThrowStrength * MeshComp->GetMass());
+	}
+}

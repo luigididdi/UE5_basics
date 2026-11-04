@@ -19,6 +19,8 @@ void UMyHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	CurrentHealth = MaxHealth;
+	CurrentStamina = MaxStamina;
+	bIsHealing = false;
 	LogHealth(TEXT("Start"));
 }
 
@@ -30,8 +32,23 @@ void UMyHealthComponent::GetDamage(int32 Damage)
 
 void UMyHealthComponent::Healing(int32 Amount)
 {
-	CurrentHealth = FMath::Clamp(CurrentHealth + Amount, 0, MaxHealth);
-	LogHealth(FString::Printf(TEXT("Cura +%d"), Amount));
+	if (CurrentHealth < MaxHealth)
+	{
+		CurrentHealth = FMath::Clamp(CurrentHealth + Amount, 0, MaxHealth);
+		LogHealth(FString::Printf(TEXT("Cura +%d"), Amount));
+	}
+}
+
+void UMyHealthComponent::UseStamina(int32 StaminaUsed)
+{
+	CurrentStamina = FMath::Clamp(CurrentStamina - StaminaUsed, 0, MaxStamina);
+	LogStamina(FString::Printf(TEXT("Stamina usata -%d"), StaminaUsed));
+}
+
+void UMyHealthComponent::RecoverStamina(int32 Amount)
+{
+	CurrentStamina = FMath::Clamp(CurrentStamina + Amount, 0, MaxStamina);
+	LogStamina(FString::Printf(TEXT("Stamina recuperata +%d"), Amount));
 }
 
 void UMyHealthComponent::ActivateHealing(bool Activate)
@@ -47,6 +64,16 @@ void UMyHealthComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	TimeSinceLastStamina += DeltaTime;
+	if (TimeSinceLastStamina > StaminaRecoveryTime)
+	{
+		TimeSinceLastStamina = 0.f;
+		if (CurrentStamina < MaxStamina)
+		{
+			RecoverStamina(StaminaRecovered);
+		}
+	}
+	
 	if (!bIsHealing) return;
 
 	TimeSinceLastHeal += DeltaTime;
@@ -69,3 +96,14 @@ void UMyHealthComponent::LogHealth(const FString& Reason) const
 	}
 }
 
+void UMyHealthComponent::LogStamina(const FString& Stamina) const
+{
+	const FString Msg = FString::Printf(TEXT("%s | %s -> Stamina %d/%d"),
+		*GetOwner()->GetName(), *Stamina, CurrentStamina, MaxStamina);
+
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *Msg);               // finestra Output Log
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(1, 2.f, FColor::Green, Msg); // a schermo (key 1 = sovrascrive il messaggio precedente)
+	}
+}

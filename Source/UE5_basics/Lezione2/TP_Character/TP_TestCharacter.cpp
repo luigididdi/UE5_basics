@@ -12,6 +12,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
 #include "UE5_basics/Lezione2/MyHealthComponent.h"
+#include "UE5_basics/MyPalla.h"
 
 // Sets default values
 ATP_TestCharacter::ATP_TestCharacter()
@@ -96,6 +97,7 @@ void ATP_TestCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATP_TestCharacter::Look);
 		
+		//Healing
 		if (DamageAction)
 			EnhancedInputComponent->BindAction(DamageAction, ETriggerEvent::Started, this, &ATP_TestCharacter::DebugDamage);
 		if (HealAction)
@@ -103,8 +105,17 @@ void ATP_TestCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		if (ToggleAutoHealAction)
 			EnhancedInputComponent->BindAction(ToggleAutoHealAction, ETriggerEvent::Started, this, &ATP_TestCharacter::DebugToggleAutoHeal);
 
+		//Stamina Usage
+		if (SprintAction)
+			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &ATP_TestCharacter::Sprint);
+		
+		//A Reale Palla
+		if (ThrowBallAction)
+			EnhancedInputComponent->BindAction(ThrowBallAction, ETriggerEvent::Started, this, &ATP_TestCharacter::ThrowBall);
 		if (PickBallAction)
 			EnhancedInputComponent->BindAction(PickBallAction, ETriggerEvent::Started, this, &ATP_TestCharacter::PickBall);
+		if (DropPallaAction)
+			EnhancedInputComponent->BindAction(DropPallaAction, ETriggerEvent::Started, this, &ATP_TestCharacter::DropBall);
 		if (Gabagool)
 			EnhancedInputComponent->BindAction(Gabagool, ETriggerEvent::Started, this, &ATP_TestCharacter::Kitemmuort);
 	}
@@ -217,22 +228,60 @@ void ATP_TestCharacter::NotifyControllerChanged()
 	}
 }
 
+void ATP_TestCharacter::ThrowBall()
+{
+	if (!doIHaveBall || !CurrentBall)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, "Non hai nessuna palla da lanciare!");
+		return;
+	}
+
+	// Chiamiamo la funzione di lancio definita nella palla
+	CurrentBall->Throw();
+	ThrowStamina();
+
+	// Resettiamo gli stati del personaggio
+	CurrentBall = nullptr;
+	doIHaveBall = false;
+	canPickBall = false;
+    
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Magenta, "Hai lanciato la palla!");
+}
+
 void ATP_TestCharacter::PickBall()
 {
-	if (!doIHaveBall)
+	if (doIHaveBall)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, "Ho già la palla in mano!");
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, "Hai già la palla in mano!");
 		return;
 	}
 	
-	if (!canPickBall)
+	if (canPickBall && CurrentBall)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, "Non riesco ad arrivare alla palla!");
+		doIHaveBall = true;
+		CurrentBall->PickUp(this);
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, "Ho preso la palla in mano!");
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, "Nessuna palla vicina da raccogliere!");
+	}
+}
+
+void ATP_TestCharacter::DropBall()
+{
+	if (!doIHaveBall || !CurrentBall)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, "Non hai nessuna palla da lasciare!");
 		return;
 	}
+
+	CurrentBall->Drop();
+	CurrentBall = nullptr;
+	doIHaveBall = false;
+	canPickBall = false;
 	
-	doIHaveBall = true;
-	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, "Ho preso la palla in mano!");
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Orange, "Hai lasciato la palla!");
 }
 
 void ATP_TestCharacter::Kitemmuort()
@@ -240,6 +289,24 @@ void ATP_TestCharacter::Kitemmuort()
 	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, "Kitemmuort");
 }
 
+//Health Stuff
 void ATP_TestCharacter::DebugDamage()         { Health->GetDamage(10); }
 void ATP_TestCharacter::DebugHeal()           { Health->Healing(10); }
 void ATP_TestCharacter::DebugToggleAutoHeal() { Health->ToggleAutoHeal(); }
+
+//Stamina Stuff
+void ATP_TestCharacter::ThrowStamina()
+{
+	if (Health->CurrentStamina > 0)
+	{
+		Health->UseStamina(25);
+	}
+}
+
+void ATP_TestCharacter::Sprint()
+{
+	if (Health->CurrentStamina > 0)
+	{
+		Health->UseStamina(10);
+	}
+}

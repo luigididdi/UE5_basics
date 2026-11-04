@@ -31,6 +31,12 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Health")
 	int32 GetCurrentHealth() const { return CurrentHealth; }
+	
+	UFUNCTION(BlueprintCallable, Category="Stamina")
+	void UseStamina(int StaminaUsed);
+	
+	UFUNCTION(BlueprintCallable, Category="Stamina")
+	void RecoverStamina(int Amount);
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 		FActorComponentTickFunction* ThisTickFunction) override;
@@ -38,12 +44,6 @@ public:
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Health")
-	int32 MaxHealth = 100;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Health")
-	int32 CurrentHealth = 0;
 
 	/** Quanti HP recupera l'autocura a ogni "tick" di cura */
 	UPROPERTY(EditAnywhere, Category="Health|AutoHeal")
@@ -53,13 +53,34 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Health|AutoHeal")
 	float AutoHealInterval = 1.0f;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stamina")
+	int32 MaxStamina = 100;
+
+	UPROPERTY(EditAnywhere, Category="Stamina")
+	float StaminaRecoveryTime = 1.0f;
+	
 private:
 	
 	bool bIsHealing = false;
 	float TimeSinceLastHeal = 0.f;
+	float TimeSinceLastStamina = 0.f;
 
 	void LogHealth(const FString& Reason) const;
-		
+	void LogStamina(const FString& Stamina) const;
+	
+public:
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Health")
+	int32 MaxHealth = 100;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Health")
+	int32 CurrentHealth = 0;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Stamina")
+	int32 CurrentStamina = 0;
+	
+	UPROPERTY(EditAnywhere, Category="Stamina")
+	int32 StaminaRecovered = 5;
 };
 
 // TODO: Che abbia anche l'autorecover a tempo, tramite comando e due oggetti, uno che guarisce ed uno che fa danno

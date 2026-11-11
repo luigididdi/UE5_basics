@@ -84,7 +84,7 @@ void AMyFirstActor::OnBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
 	for(auto& SensedClass : SensedCharacterClasses)
 	{
 		if(SensedClass == OtherActorClass || OtherActorClass->IsChildOf(SensedClass))
-		{
+		{/*
 			if(!TrackedActors.Contains(OtherActor))
 			{
 				TrackedActors.Add(OtherActor);
@@ -93,7 +93,7 @@ void AMyFirstActor::OnBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
 
 				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Cyan, "SPAWN/IN: " + OtherActor->GetName());
 			}
-			break;
+			break;*/
 		}
 	}
 }
@@ -135,15 +135,15 @@ void AMyFirstActor::OnEndOverlap(AActor* OverlappedActor, AActor* OtherActor)
 		return;
 	}
 
-	if(TrackedActors.Contains(OtherActor))
+	/*if(TrackedActors.Contains(OtherActor))
 	{
 		TrackedActors.Remove(OtherActor);
 		OtherActor->OnDestroyed.RemoveDynamic(this, &AMyFirstActor::OnTargetDestroyed);
 
 		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Yellow, "OUT: " + OtherActor->GetName());
-	}
+	}*/
 }
-
+/*
 void AMyFirstActor::OnTargetDestroyed(AActor* DestroyedActor)
 {
 	if(IsValid(DestroyedActor))
@@ -152,7 +152,7 @@ void AMyFirstActor::OnTargetDestroyed(AActor* DestroyedActor)
 		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, "DESTROY: " + DestroyedActor->GetName());
 	}
 }
-
+*/
 void AMyFirstActor::BindTest()
 {
 	GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Purple, "Player has shoot!");
@@ -175,7 +175,7 @@ void AMyFirstActor::Tick(float DeltaTime)
 	if(PC && PC->WasInputKeyJustPressed(EKeys::P))
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, "=== LISTA ATTORI DENTRO MYFIRSTACTOR ===");
-        
+        /*
 		for(int32 i = TrackedActors.Num() - 1; i >= 0; --i)
 		{
 			if(IsValid(TrackedActors[i]))
@@ -186,7 +186,7 @@ void AMyFirstActor::Tick(float DeltaTime)
 			{
 				TrackedActors.RemoveAt(i);
 			}
-		}
+		}*/
 	}
 }
 

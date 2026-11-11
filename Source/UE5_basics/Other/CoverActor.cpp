@@ -24,131 +24,50 @@ void ACoverActor::BeginPlay() {
 
 }
 
-//////////////////////////////////////////////////////////////////////////
-// Enable/Disable cover
-
-float ACoverActor::DistanceFromPlayer(FName SocketName) {
-	FVector SocketLocation = SM->GetSocketLocation(SocketName);
-	FVector PlayerLocation = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0)->GetActorLocation();
-	float distance = FVector::Distance(SocketLocation, PlayerLocation);
-
-	return distance;
-}
-
-FName ACoverActor::GetNearbySocket() {
-	const FName AvailableSockets[12] =
-	{
-		FName("ForwardSocket_1"),
-		FName("ForwardSocket_2"),
-		FName("ForwardSocket_3"),
-		FName("BackwardSocket_1"),
-		FName("BackwardSocket_2"),
-		FName("BackwardSocket_3"),
-		FName("RightSocket_1"),
-		FName("RightSocket_2"),
-		FName("RightSocket_3"),
-		FName("LeftSocket_1"),
-		FName("LeftSocket_2"),
-		FName("LeftSocket_3")
-	};
-
-	FName NearestSocket = AvailableSockets[0]; // Get the first one if something goes wrong
+void ACoverActor::DetermineMovementDirection(const ACharacter* PlayerCharacter, FVector& MovementDirection, FRotator& FacingRotation) const
+{
 	
-	float MinDistance = /*INFINITY*/ 300.0f;
-	//Find the socket that is close to the character
-	for (uint8 SocketPtr = 0; SocketPtr < 12; SocketPtr++) {
-		float Distance = DistanceFromPlayer(AvailableSockets[SocketPtr]);
-		if (Distance < MinDistance) {
-			NearestSocket = AvailableSockets[SocketPtr];
-			MinDistance = Distance;
-		}
+	if (!PlayerCharacter) return;
+
+	const FVector PlayerLocation = PlayerCharacter->GetActorLocation();
+    
+	// Line trace dal Player verso il centro del CoverActor per rilevare la superficie
+	const FVector TraceStart = PlayerLocation;
+	const FVector TraceEnd = GetActorLocation();
+
+	FHitResult HitResult;
+	FCollisionQueryParams TraceParams;
+	TraceParams.AddIgnoredActor(PlayerCharacter);
+
+	// Tracciamo una linea per trovare l'impatto sulla mesh/box del CoverActor
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_Visibility, TraceParams);
+
+	FVector HitNormal = FVector::ZeroVector;
+
+	if (bHit && HitResult.GetActor() == this) {
+		HitNormal = HitResult.ImpactNormal;
+	} else {
+		// Fallback in caso il raycast fallisca: calcola la direzione approssimata dal centro della cover al player
+		HitNormal = (PlayerLocation - GetActorLocation()).GetSafeNormal2D();
 	}
 
-	return NearestSocket;
-}
+	// Assicuriamoci che la normale sia perfettamente orizzontale sul piano XY
+	HitNormal.Z = 0.0f;
+	HitNormal.Normalize();
 
-void ACoverActor::DetermineMovementDirection(FVector& MovementDirection, FRotator& FacingDirection) {
-	FName NearbySocket = GetNearbySocket();
-	
-	//Determine the movement and facing direction of the player
-	FRotator FacingRot = GetActorRotation();
+	// 1. FacingRotation: il personaggio deve guardare verso la parete (opposto della normale)
+	FacingRotation = (-HitNormal).Rotation();
 
-	if (NearbySocket.IsEqual("ForwardSocket_1") || NearbySocket.IsEqual("ForwardSocket_2") || NearbySocket.IsEqual("ForwardSocket_3")) {
-		GEngine->AddOnScreenDebugMessage(-1, 1.2f, FColor::Green, TEXT("socket forward"));
-		MovementDirection = -GetActorRightVector();
-		FacingDirection = FacingRot + FRotator(0, 180, 0);;
-	}
-	else if (NearbySocket.IsEqual("BackwardSocket_1") || NearbySocket.IsEqual("BackwardSocket_2") || NearbySocket.IsEqual("BackwardSocket_3")) {
-		GEngine->AddOnScreenDebugMessage(-1, 1.2f, FColor::Green, TEXT("socket backward"));
-		MovementDirection = GetActorRightVector();
-		FacingDirection = FacingRot + FRotator(0, 0, 0);
-	}
-	else if (NearbySocket.IsEqual("RightSocket_1") || NearbySocket.IsEqual("RightSocket_2") || NearbySocket.IsEqual("RightSocket_3")) {
-		GEngine->AddOnScreenDebugMessage(-1, 1.2f, FColor::Green, TEXT("socket right"));
-		MovementDirection = GetActorForwardVector();
-		FacingDirection = FacingRot + FRotator(0, -90, 0);
-	}
-	else { //LeftSocket
-		GEngine->AddOnScreenDebugMessage(-1, 1.2f, FColor::Green, TEXT("socket left"));
-		MovementDirection = -GetActorForwardVector();
-		FacingDirection = FacingRot + FRotator(0, 90.f, 0);
-	}
+	// 2. MovementDirection: Vettore di scorrimento laterale lungo la parete
+	// Il prodotto vettoriale tra la normale della parete e il vettore UP (0,0,1) genera l'asse di scorrimento lungo il muro
+	MovementDirection = FVector::CrossProduct(HitNormal, FVector::UpVector).GetSafeNormal();
 }
 
 
-void ACoverActor::RetrieveMovementDirectionAndFacingRotation(FVector& MovementDirection, FRotator& FacingRotation) {
-	DetermineMovementDirection(MovementDirection, FacingRotation);
+void ACoverActor::RetrieveMovementDirectionAndFacingRotation(ACharacter* PlayerCharacter, FVector& MovementDirection, FRotator& FacingRotation) const
+{
+	DetermineMovementDirection(PlayerCharacter,MovementDirection, FacingRotation);
 }
 
-FVector ACoverActor::GetPositionHiddenFromPlayer() {
-	FName NearbySocket = GetNearbySocket();
-	FName OppositeSocket = GetOppositeSocket(NearbySocket);
-
-	FVector SocketLocation = SM->GetSocketLocation(OppositeSocket);
-
-	return SocketLocation;
-}
-
-FName ACoverActor::GetOppositeSocket(FName Socket) {
-	FName OppositeSocket = FName("ForwardSocket_1");
-
-	if (Socket.IsEqual("ForwardSocket_1"))
-		OppositeSocket = FName("BackwardSocket_1");
-
-	if(Socket.IsEqual("ForwardSocket_2"))
-		OppositeSocket = FName("BackwardSocket_1");
-
-	if (Socket.IsEqual("ForwardSocket_3"))
-		OppositeSocket = FName("BackwardSocket_1");
-
-	if (Socket.IsEqual("BackwardSocket_1"))
-		OppositeSocket = FName("ForwardSocket_1");
-
-	if (Socket.IsEqual("BackwardSocket_2"))
-		OppositeSocket = FName("ForwardSocket_1");
-
-	if (Socket.IsEqual("BackwardSocket_3"))
-		OppositeSocket = FName("ForwardSocket_1");
-
-	if (Socket.IsEqual("RightSocket_1"))
-		OppositeSocket = FName("LeftSocket_1");
-
-	if (Socket.IsEqual("RightSocket_2"))
-		OppositeSocket = FName("LeftSocket_1");
-
-	if (Socket.IsEqual("RightSocket_3"))
-		OppositeSocket = FName("LeftSocket_1");
-
-	if (Socket.IsEqual("LeftSocket_1"))
-		OppositeSocket = FName("RightSocket_1");
-
-	if (Socket.IsEqual("LeftSocket_2"))
-		OppositeSocket = FName("RightSocket_1");
-
-	if (Socket.IsEqual("LeftSocket_3"))
-		OppositeSocket = FName("RightSocket_1");
-
-	return OppositeSocket;
-}
 
 

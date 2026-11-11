@@ -41,7 +41,7 @@ void AEnemyAIController::BeginPlay() {
 
 	RunBehaviorTree(BehaviourTree);
 	// Inscribe to delegate to stop behaviour tree when the pawn die
-	AEnemy* ControlledPawn = dynamic_cast<AEnemy*>(GetPawn());
+	AEnemy* ControlledPawn = Cast<AEnemy>(GetPawn());
 	
 	if (IsValid(ControlledPawn)) {
 		ControlledPawn->HealthComponent->OnHealtToZero.AddDynamic(this, &AEnemyAIController::StopAI);
@@ -58,7 +58,7 @@ void AEnemyAIController::BeginPlay() {
 
 void AEnemyAIController::StopAI() {
 	BrainComponent->StopLogic("Death");
-	AEnemy* ControlledPawn = dynamic_cast<AEnemy*>(GetPawn());
+	AEnemy* ControlledPawn = Cast<AEnemy>(GetPawn());
 	
 	if (IsValid(ControlledPawn)) {		
 		ControlledPawn->GetCharacterMovement()->MaxWalkSpeed = 0.0f;
@@ -76,7 +76,7 @@ void AEnemyAIController::DetectPlayer() {
 
 void AEnemyAIController::OnPerceptionUpdate_SenseManagement(const TArray<AActor*>& UpdateActors) {
 	for (auto& Actor : UpdateActors) {
-		ATP_Character* PlayerCharacter = dynamic_cast<ATP_Character*>(Actor);
+		ATP_Character* PlayerCharacter = Cast<ATP_Character>(Actor);
 		
 		if (IsValid(PlayerCharacter)) { // If spotted the player character
 			const FActorPerceptionInfo* ActorInfo = PerceptionComponent->GetActorInfo(*Actor);
@@ -90,7 +90,8 @@ void AEnemyAIController::OnPerceptionUpdate_SenseManagement(const TArray<AActor*
 			}
 
 			FAISenseID HearingID = HearingConfig->GetSenseID();
-
+			//TArray<AActor*> OutActors;
+			//UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATP_Character::StaticClass(), OutActors);
 			if (ActorInfo->LastSensedStimuli.IsValidIndex(HearingID)) { // Was the hearing stimuled?
 				if (ActorInfo->LastSensedStimuli[HearingID].WasSuccessfullySensed()) {
 					ManageHearing();

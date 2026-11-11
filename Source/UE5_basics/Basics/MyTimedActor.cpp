@@ -58,7 +58,10 @@ void AMyTimedActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	StartTimer();	
+	StartTimer();
+
+	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+	TimerManager.SetTimerForNextTick(this, &AMyTimedActor::TimerCallback);
 }
 
 // Called every frame

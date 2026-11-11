@@ -21,8 +21,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UBoxComponent* BoxComponent;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tracking")
-	TArray<AActor*> TrackedActors;
+	void TimerCallback();
 
 protected:
 	
@@ -35,9 +34,6 @@ protected:
 
 	UFUNCTION()
 	void OnEndOverlap(AActor* OverlappedActor, AActor* OtherActor);
-	
-	UFUNCTION()
-	void OnTargetDestroyed(AActor* DestroyedActor);
 
 public:
 	

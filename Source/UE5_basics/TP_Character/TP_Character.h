@@ -15,6 +15,7 @@
 #include "TP_Character.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGameStateCharacter);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHitEvent, AActor*, HitActor, FHitResult, HitRes);
 UCLASS(config=Game)
 class UE5_BASICS_API ATP_Character : public ACharacter
 {
@@ -28,9 +29,6 @@ class UE5_BASICS_API ATP_Character : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FollowCamera;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	UChildActorComponent* WeaponComponent;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true") )
 	UStaticMeshComponent* WeaponMesh;
 
@@ -42,7 +40,7 @@ class UE5_BASICS_API ATP_Character : public ACharacter
 
 public:
 	ATP_Character();
-
+	
 	/** Broadcasted when character land on ground */
 	UPROPERTY(BlueprintAssignable)
 	FGameStateCharacter OnCharacterLanding;
@@ -82,6 +80,9 @@ public:
 	/** Broadcsted when character literally throw something */
 	UPROPERTY(BlueprintAssignable)
 	FGameStateCharacter OnCharacterThrow;
+
+	UPROPERTY(BlueprintAssignable)
+	FHitEvent OnHitActor;
 
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
@@ -205,6 +206,8 @@ protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
+
+	
 	
 	// Mechanic: Jump
 	void JumpCharacter();

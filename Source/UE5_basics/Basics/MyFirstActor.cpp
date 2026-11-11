@@ -3,6 +3,8 @@
 
 #include "MyFirstActor.h"
 
+#include "Kismet/GameplayStatics.h"
+
 // Sets default values
 AMyFirstActor::AMyFirstActor()
 {
@@ -45,7 +47,7 @@ void AMyFirstActor::BeginPlay()
 	{
 		return;
 	}
-
+	
 	UClass* OtherActorClass = OtherActor->GetClass();
 	for(auto& SensedClass : SensedCharacterClasses)
 	{
@@ -186,4 +188,9 @@ void AMyFirstActor::Tick(float DeltaTime)
 			}
 		}
 	}
+}
+
+void AMyFirstActor::TimerCallback()
+{
+	GEngine->AddOnScreenDebugMessage(896745, 2.f, FColor::Green, FString::Printf(TEXT("world time: %f"), GetWorld()->TimeSeconds));
 }

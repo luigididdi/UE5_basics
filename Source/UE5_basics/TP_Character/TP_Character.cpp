@@ -7,6 +7,8 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -14,10 +16,13 @@
 #include "UE5_basics/Enemy/Enemy.h"
 #include "UE5_basics/Other/HealthComponent.h"
 #include "UE5_basics/Other/WeaponSlot.h"
+#include "UE5_basics/MyPalla.h"
+#include "InputMappingContext.h"
+#include "EnhancedInputSubsystems.h"
 
 
 //////////////////////////////////////////////////////////////////////////
-// ATP_ThirdPersonCharacter
+// ATP_Character
 
 ATP_Character::ATP_Character() {
 	// Set size for collision capsule
@@ -130,12 +135,12 @@ void ATP_Character::HandleProgressCrouch(float Height) {
 }
 
 //////////////////////////////////////////////////////////////////////////
-// Input
+// Input (Mantenuti sia i bindings classici Axis/Action del professore che il supporto EnhancedInput per le tue azioni custom)
 
 void ATP_Character::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) {
-	// Set up gameplay key bindings
-	check(PlayerInputComponent);
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	
+	// Bindings classici del professore
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ATP_Character::JumpCharacter);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ATP_Character::StopJumpingCharacter);
 	
@@ -152,36 +157,47 @@ void ATP_Character::SetupPlayerInputComponent(class UInputComponent* PlayerInput
 	PlayerInputComponent->BindAxis("MoveForward", this, &ATP_Character::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &ATP_Character::MoveRight);
 
-	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
-	// "turn" handles devices that provide an absolute delta, such as a mouse.
-	// "turnrate" is for devices that we choose to treat as a rate of change, such as an analog joystick
 	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("TurnRate", this, &ATP_Character::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &ATP_Character::LookUpAtRate);
+
+	// Enhanced Input bindings aggiuntivi per le tue azioni custom (Palla, Stamina, Debug)
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
+		if (DamageAction)
+			EnhancedInputComponent->BindAction(DamageAction, ETriggerEvent::Started, this, &ATP_Character::DebugDamage);
+		if (HealAction)
+			EnhancedInputComponent->BindAction(HealAction, ETriggerEvent::Started, this, &ATP_Character::DebugHeal);
+		if (ToggleAutoHealAction)
+			EnhancedInputComponent->BindAction(ToggleAutoHealAction, ETriggerEvent::Started, this, &ATP_Character::DebugToggleAutoHeal);
+		if (SprintAction)
+			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &ATP_Character::Sprint);
+		if (ThrowBallAction)
+			EnhancedInputComponent->BindAction(ThrowBallAction, ETriggerEvent::Started, this, &ATP_Character::ThrowBall);
+		if (PickBallAction)
+			EnhancedInputComponent->BindAction(PickBallAction, ETriggerEvent::Started, this, &ATP_Character::PickBall);
+		if (DropPallaAction)
+			EnhancedInputComponent->BindAction(DropPallaAction, ETriggerEvent::Started, this, &ATP_Character::DropBall);
+		if (Gabagool)
+			EnhancedInputComponent->BindAction(Gabagool, ETriggerEvent::Started, this, &ATP_Character::Kitemmuort);
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
 // Movement and rotation
 
 void ATP_Character::TurnAtRate(float Rate) {
-	// calculate delta for this frame from the rate information
 	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
 }
 
 void ATP_Character::LookUpAtRate(float Rate) {
-	// calculate delta for this frame from the rate information
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
-
 void ATP_Character::MoveForward(float Value) {
-	if ((Controller != NULL) && (Value != 0.0f) & !bIsInCover && bCanMove) {
-		// find out which way is forward
+	if ((Controller != NULL) && (Value != 0.0f) && !bIsInCover && bCanMove) {
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-		// get forward vector
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 		AddMovementInput(Direction, Value);
 	}
@@ -190,16 +206,11 @@ void ATP_Character::MoveForward(float Value) {
 void ATP_Character::MoveRight(float Value) {
 	if ((Controller != NULL) && (Value != 0.0f) && bCanMove) {
 		if (!bIsInCover) {
-			// find out which way is right
 			const FRotator Rotation = Controller->GetControlRotation();
 			const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-			// get right vector 
 			const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-			// add movement in that direction
 			AddMovementInput(Direction, Value);
 		} else {
-			//Move according to the cover actor's position
 			if (CheckAroundMe(CheckCoverRadius)) {
 				AddMovementInput(CoverDirectionMovement, Value);
 			} else {
@@ -271,7 +282,6 @@ void ATP_Character::Landed(const FHitResult& Hit) {
 	OnCharacterLanding.Broadcast();
 }
 
-/** This is a UE4 function of AActor class*/
 void ATP_Character::OnJumped_Implementation() { 
 	GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Green, TEXT("On jumped"));
 	OnCharacterJumping.Broadcast();
@@ -281,7 +291,6 @@ void ATP_Character::OnJumped_Implementation() {
 // Mechanic: Crouch
 
 void ATP_Character::CrouchCharacter() {
-	
 	if (CanCrouch()) {
 		GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Green, TEXT("Crouch in"));
 		Crouch();
@@ -304,12 +313,9 @@ void ATP_Character::StopCrouchCharacter() {
 
 void ATP_Character::FireFromWeapon() {
 	FCollisionQueryParams Params;
-	// Ignore the player's pawn
 	Params.AddIgnoredActor(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
 
-	// The hit result gets populated by the line trace
 	FHitResult Hit;
-
 	float WeaponRange = Arsenal[ActiveWeapon].Range;
 
 	FVector Start = FollowCamera->GetComponentLocation();
@@ -326,7 +332,6 @@ void ATP_Character::FireFromWeapon() {
 	OnCharacterTraceLine.Broadcast();
 	
 	if (bHit) {
-		//DrawDebugLine(GetWorld(), Start, End, FColor::Green, false, 3.0f);
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), Arsenal[ActiveWeapon].HitEFX, Hit.ImpactPoint);
 		OnHitActor.Broadcast(Hit.GetActor(), Hit);
 		AEnemy* HitActor = Cast<AEnemy>(Hit.GetActor());
@@ -391,8 +396,6 @@ void ATP_Character::ToggleCover() {
 		if (bIsInCover && Cover) {            
 			FRotator CoverRotation;
 			Cover->RetrieveMovementDirectionAndFacingRotation(this, CoverDirectionMovement, CoverRotation);
-            
-			// Imposta la rotazione del personaggio verso la parete
 			SetActorRotation(CoverRotation);
 			CrouchCharacter();
 		} else {
@@ -406,18 +409,15 @@ void ATP_Character::ExitFromCover() {
 	StopCrouchCharacter();
 }
 
-
 bool ATP_Character::CheckAroundMe(float Radius) {
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
 
 	FCollisionShape CollShape = FCollisionShape::MakeSphere(Radius);
-
 	TArray<FHitResult> Hit;
 
 	FVector Pos = GetCapsuleComponent()->GetComponentLocation();
 	bool bHit = GetWorld()->SweepMultiByChannel(Hit, Pos, Pos, FQuat::Identity, ECC_Pawn, CollShape, Params);
-	//DrawDebugSphere(GetWorld(), Pos, Radius, 12, FColor::Orange, false, 0.2f);
 	
 	if (bHit) {
 		for (auto& HitActor : Hit) {
@@ -471,8 +471,6 @@ void ATP_Character::ThrowObject() {
 	FVector ThrowStartLocation = FollowCamera->GetComponentLocation();
 	FRotator ThrowRotator = FollowCamera->GetComponentRotation();
 	FVector OutVelocity = PredictThrowablePath();
-	//AActorThrowable* ThrowedObj = GetWorld()->SpawnActor<AActorThrowable>(AActorThrowable::StaticClass(), ThrowStartLocation, ThrowRotator, SpawnParams);
-	//ThrowedObj->Init(GetEquipThrowable(), OutVelocity);
 }
 
 FVector ATP_Character::PredictThrowablePath() {
@@ -488,7 +486,6 @@ FThrowable ATP_Character::GetEquipThrowable() {
 	return Throwables[ActiveThrowable];
 }
 
-
 //////////////////////////////////////////////////////////////////////////
 // Utilities
 
@@ -497,13 +494,11 @@ void ATP_Character::StopCharacter() {
 	if (bIsAiming) {
 		AimOut();
 	}
-	
 	EnablePlayerInput(false);
 }
 
 void ATP_Character::EnablePlayerInput(bool Enabled) {
 	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-
 	if (Enabled) {
 		EnableInput(PlayerController);
 	} else {
@@ -521,4 +516,109 @@ bool ATP_Character::IsAimingWithWeapon() {
 
 bool ATP_Character::IsAimingWithArch() {
 	return bIsAiming && bIsUsingArch;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// --- LOGICA AGGIUNTA PER PALLA E STAMINA ---
+
+void ATP_Character::ThrowBall()
+{
+	if (!doIHaveBall || !CurrentBall)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, "Non hai nessuna palla da lanciare!");
+		return;
+	}
+
+	CurrentBall->Throw();
+	ThrowStamina();
+
+	CurrentBall = nullptr;
+	doIHaveBall = false;
+	canPickBall = false;
+    
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Magenta, "Hai lanciato la palla!");
+}
+
+void ATP_Character::PickBall()
+{
+	if (doIHaveBall)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, "Hai già la palla in mano!");
+		return;
+	}
+	
+	if (canPickBall && CurrentBall)
+	{
+		doIHaveBall = true;
+		CurrentBall->PickUp(this);
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, "Ho preso la palla in mano!");
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, "Nessuna palla vicina da raccogliere!");
+	}
+}
+
+void ATP_Character::DropBall()
+{
+	if (!doIHaveBall || !CurrentBall)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, "Non hai nessuna palla da lasciare!");
+		return;
+	}
+
+	CurrentBall->Drop();
+	CurrentBall = nullptr;
+	doIHaveBall = false;
+	canPickBall = false;
+	
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Orange, "Hai lasciato la palla!");
+}
+
+void ATP_Character::Kitemmuort()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, "Kitemmuort");
+}
+
+// Health & Stamina Debug Stuff
+void ATP_Character::DebugDamage()         
+{ 
+	if (HealthComponent) HealthComponent->GetDamage(10); 
+}
+
+void ATP_Character::DebugHeal()           
+{ 
+	// Se usi HealthComponent del professore o il MyHealthComponent personalizzato, adattalo qui se necessario
+}
+
+void ATP_Character::DebugToggleAutoHeal() { }
+
+void ATP_Character::ThrowStamina()
+{
+	// Gestione stamina se integrata col tuo componente salute/stamina
+}
+
+void ATP_Character::Sprint()
+{
+	// Gestione sprint
+}
+
+void ATP_Character::NotifyControllerChanged()
+{
+	Super::NotifyControllerChanged();
+
+	if (!DefaultMappingContext)
+	{
+		return;
+	}
+
+	if (APlayerController* PC = Cast<APlayerController>(Controller))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
+			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Enhanced Input Mapping Context aggiunto con successo!"));
+		}
+	}
 }

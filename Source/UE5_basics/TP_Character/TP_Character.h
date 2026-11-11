@@ -14,6 +14,11 @@
 #include "UE5_basics/Other/WeaponSlot.h"
 #include "TP_Character.generated.h"
 
+class UInputAction;
+class UInputMappingContext;
+class UEnhancedInputComponent;
+class AMyPalla;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGameStateCharacter);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHitEvent, AActor*, HitActor, FHitResult, HitRes);
 UCLASS(config=Game)
@@ -207,8 +212,6 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
 
-	
-	
 	// Mechanic: Jump
 	void JumpCharacter();
 	void StopJumpingCharacter();
@@ -226,9 +229,49 @@ protected:
 	// Mechanic: Reload
 	void ReloadWeapon();
 
-	// 
+	// --- INPUTS AGGIUNTI DA TEST CHARACTER (Stamina, Debug, Palla) ---
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> DamageAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> HealAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> SprintAction;
+
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> ToggleAutoHealAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> ShootAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> ThrowBallAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> PickBallAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> DropPallaAction;
+	
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> Gabagool;
+	
+	void DebugDamage();
+	void DebugHeal();
+	void DebugToggleAutoHeal();
+	
+	void ThrowStamina();
+	void Sprint();
 
 public:
+	
+	// Mapping context per l'Enhanced Input
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputMappingContext> DefaultMappingContext;
+
+	// Metodo nativo di Unreal per intercettare l'associazione del controller
+	virtual void NotifyControllerChanged() override;
 	
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
@@ -286,4 +329,19 @@ public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+	
+	// --- FUNZIONALITÀ PALLA AGGIUNTIVE ---
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Ball")
+	TObjectPtr<AMyPalla> CurrentBall;
+
+	UPROPERTY(EditAnywhere, Category="Input")
+	TObjectPtr<UInputAction> DropBallAction;
+
+	void DropBall();
+	void ThrowBall();
+	void PickBall();
+	void Kitemmuort();
+	
+	bool doIHaveBall = false;
+	bool canPickBall = false;
 };
